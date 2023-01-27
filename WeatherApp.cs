@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json.Linq;
+using Timer = System.Windows.Forms.Timer;
 
 namespace WeatherApp
 {
@@ -8,12 +9,19 @@ namespace WeatherApp
     {
         private static NotifyIcon weatherIcon;
         private static NotifyIcon temperatureIcon;
+        private static String latitude = "";
+        private static String longitude = "";
+        private static char measurement = 'F';
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
 
         public WeatherApp()
         {
+            latitude = Properties.Settings.Default.latitude;
+            longitude = Properties.Settings.Default.longitude;
+            measurement = Properties.Settings.Default.measurement;
+
             ContextMenuStrip menu = new ContextMenuStrip();
 
             ToolStripMenuItem optionPromptLocation = new ToolStripMenuItem();
@@ -25,6 +33,11 @@ namespace WeatherApp
             optionAutoLocation.Text = "Auto-Location";
             optionAutoLocation.Click += new EventHandler(AutoGetLocation);
             menu.Items.Add(optionAutoLocation);
+
+            ToolStripMenuItem optionMeasurement = new ToolStripMenuItem();
+            optionMeasurement.Text = "Temperature: °" + measurement;
+            optionMeasurement.Click += new EventHandler(SwapMeasurement);
+            menu.Items.Add(optionMeasurement);
 
             ToolStripMenuItem optionExit = new ToolStripMenuItem();
             optionExit.Text = "Exit";
@@ -45,6 +58,22 @@ namespace WeatherApp
                 Text = "Right-click for location options",
                 Visible = true
             };
+
+            GetWeather();
+
+            Timer timer = new Timer();
+            timer.Interval = 1800000;
+            timer.Tick += new EventHandler(RefreshWeather);
+            timer.Start();
+        }
+
+        private static void SwapMeasurement(Object sender, EventArgs e)
+        {
+            if (measurement == 'F') measurement = 'C';
+            else measurement = 'F';
+            ToolStripMenuItem optionMeasurement = (ToolStripMenuItem) sender;
+            optionMeasurement.Text = "Temperature: °" + measurement;
+            GetWeather();
         }
 
         private static void PromptLocation(Object sender, EventArgs e)
@@ -86,9 +115,9 @@ namespace WeatherApp
             JToken first = root1.First;
             if (first != null && first.HasValues)
             {
-                String latitude = first.Value<String>("lat");
-                String longitude = first.Value<String>("lon");
-                GetWeather(latitude, longitude);
+                latitude = first.Value<String>("lat") ?? latitude;
+                longitude = first.Value<String>("lon") ?? longitude;
+                GetWeather();
             }
         }
 
@@ -102,14 +131,20 @@ namespace WeatherApp
             JToken root = JToken.Parse(response);
             if (root.HasValues)
             {
-                String latitude = root.Value<String>("latitude");
-                String longitude = root.Value<String>("longitude");
-                GetWeather(latitude, longitude);
+                latitude = root.Value<String>("latitude") ?? latitude;
+                longitude = root.Value<String>("longitude") ?? longitude;
+                GetWeather();
             }
         }
 
-        private static async void GetWeather(String latitude, String longitude)
+        private static void RefreshWeather(Object sender, EventArgs e)
         {
+            GetWeather();
+        }
+
+        private static async void GetWeather()
+        {
+            if (latitude == "" || longitude == "") return;
             HttpClient http = new HttpClient();
             ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
             http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
@@ -125,10 +160,11 @@ namespace WeatherApp
                 int temperatureF = weather.Value<int>("temperature");
                 int temperatureC = ((temperatureF - 32) * 5) / 9;
                 weatherIcon.Text = forecast;
-                SetTemperatureIcon('f', temperatureF);
+                SetTemperatureIcon(temperatureF, temperatureC);
                 temperatureIcon.Text = temperatureF + " °F" + Environment.NewLine + temperatureC + " °C";
             }
         }
+
         private static void PasteDigitImage(Bitmap bitmap, Bitmap digitmap, int xOffset)
         {
             for (int x = 0; x < 6; x++)
@@ -140,12 +176,12 @@ namespace WeatherApp
             }
         }
 
-        private static void SetTemperatureIcon(char measurement, int temperature)
+        private static void SetTemperatureIcon(int temperatureF, int temperatureC)
         {
             Bitmap bitmap;
-            if (measurement == 'c') bitmap = new Bitmap(Resources.degreeC);
-            else if (measurement == 'f') bitmap = new Bitmap(Resources.degreeF);
-            else return;
+            int temperature = 0;
+            bitmap = (measurement == 'C') ? new Bitmap(Resources.degreeC) : bitmap = new Bitmap(Resources.degreeF);
+            temperature = (measurement == 'C') ? temperatureC : temperatureF;
             if (temperature < 0)
             {
                 temperature *= -1;
@@ -186,8 +222,14 @@ namespace WeatherApp
 
         private void Exit(Object sender, EventArgs e)
         {
+            Properties.Settings.Default.longitude = longitude;
+            Properties.Settings.Default.latitude = latitude;
+            Properties.Settings.Default.measurement = (measurement == 'F' || measurement == 'C') ? measurement : 'F';
+            Properties.Settings.Default.Save();
             weatherIcon.Visible = false;
             weatherIcon.Dispose();
+            temperatureIcon.Visible = false;
+            temperatureIcon.Dispose();
             Application.Exit();
         }
         private static Bitmap getDigitImage(int digit)
