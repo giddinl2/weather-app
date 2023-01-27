@@ -58,5 +58,17 @@ namespace WeatherApp.Properties {
                 this["measurement"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
+        public int interval {
+            get {
+                return ((int)(this["interval"]));
+            }
+            set {
+                this["interval"] = value;
+            }
+        }
     }
 }

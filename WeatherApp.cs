@@ -7,11 +7,19 @@ namespace WeatherApp
 {
     internal class WeatherApp
     {
-        private static NotifyIcon weatherIcon;
         private static NotifyIcon temperatureIcon;
+        private static NotifyIcon weatherIcon;
+        private static ToolStripMenuItem menuTemp;
+        private static ToolStripMenuItem menuTempF;
+        private static ToolStripMenuItem menuTempC;
+        private static ToolStripMenuItem menuRefresh;
+        private static Dictionary<int, ToolStripMenuItem> menuRefreshItems = new Dictionary<int, ToolStripMenuItem>();
+        private static Timer timer;
+
         private static String latitude = "";
         private static String longitude = "";
         private static char measurement = 'F';
+        private static int interval = 30;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
@@ -21,28 +29,66 @@ namespace WeatherApp
             latitude = Properties.Settings.Default.latitude;
             longitude = Properties.Settings.Default.longitude;
             measurement = Properties.Settings.Default.measurement;
+            interval = Properties.Settings.Default.interval;
 
             ContextMenuStrip menu = new ContextMenuStrip();
 
-            ToolStripMenuItem optionPromptLocation = new ToolStripMenuItem();
-            optionPromptLocation.Text = "Input Location";
-            optionPromptLocation.Click += new EventHandler(PromptLocation);
-            menu.Items.Add(optionPromptLocation);
+            ToolStripMenuItem menuPromptLocation = new ToolStripMenuItem();
+            menuPromptLocation.Text = "Input Location";
+            menuPromptLocation.Click += new EventHandler(PromptLocation);
+            menu.Items.Add(menuPromptLocation);
 
-            ToolStripMenuItem optionAutoLocation = new ToolStripMenuItem();
-            optionAutoLocation.Text = "Auto-Location";
-            optionAutoLocation.Click += new EventHandler(AutoGetLocation);
-            menu.Items.Add(optionAutoLocation);
+            ToolStripMenuItem menuAutoLocation = new ToolStripMenuItem();
+            menuAutoLocation.Text = "Auto-Location";
+            menuAutoLocation.Click += new EventHandler(AutoGetLocation);
+            menu.Items.Add(menuAutoLocation);
 
-            ToolStripMenuItem optionMeasurement = new ToolStripMenuItem();
-            optionMeasurement.Text = "Temperature: °" + measurement;
-            optionMeasurement.Click += new EventHandler(SwapMeasurement);
-            menu.Items.Add(optionMeasurement);
+            menuTemp = new ToolStripMenuItem();
+            menuTemp.Text = "Temperature (°" + measurement + ")";
+            menu.Items.Add(menuTemp);
 
-            ToolStripMenuItem optionExit = new ToolStripMenuItem();
-            optionExit.Text = "Exit";
-            optionExit.Click += new EventHandler(Exit);
-            menu.Items.Add(optionExit);
+            menuTempF = new ToolStripMenuItem();
+            menuTempF.Text = "°F";
+            menuTempF.Checked = (measurement != 'C');
+            menuTempF.Click += new EventHandler(SwapMeasurementF);
+            menuTemp.DropDownItems.Add(menuTempF);
+
+            menuTempC = new ToolStripMenuItem();
+            menuTempC.Text = "°C";
+            menuTempC.Checked = (measurement == 'C');
+            menuTempC.Click += new EventHandler(SwapMeasurementC);
+            menuTemp.DropDownItems.Add(menuTempC);
+
+            menuRefresh = new ToolStripMenuItem();
+            menuRefresh.Text = "Auto-Refresh Interval";
+            menu.Items.Add(menuRefresh);
+
+            CreateRefreshMenu(0, "No Auto-Refresh");
+            CreateRefreshMenu(1, "1 Minute");
+            CreateRefreshMenu(5, "5 Minutes");
+            CreateRefreshMenu(10, "10 Minutes");
+            CreateRefreshMenu(15, "15 Minutes");
+            CreateRefreshMenu(20, "20 Minutes");
+            CreateRefreshMenu(30, "30 Minutes");
+            CreateRefreshMenu(60, "60 Minutes");
+            CreateRefreshMenu(480, "8 Hours");
+            CreateRefreshMenu(1440, "24 Hours");
+
+            try
+            {
+                menuRefreshItems[interval].Checked = true;
+            }
+            catch
+            {
+                menuRefreshItems[30].Checked = false;
+                interval = 30;
+            }
+            
+
+            ToolStripMenuItem menuExit = new ToolStripMenuItem();
+            menuExit.Text = "Exit";
+            menuExit.Click += new EventHandler(Exit);
+            menu.Items.Add(menuExit);
 
             temperatureIcon = new NotifyIcon
             {
@@ -61,18 +107,64 @@ namespace WeatherApp
 
             GetWeather();
 
-            Timer timer = new Timer();
-            timer.Interval = 1800000;
+            timer = new Timer();
+            timer.Interval = interval * 60000;
             timer.Tick += new EventHandler(RefreshWeather);
             timer.Start();
+        }
+
+        private static void CreateRefreshMenu(int minutes, String text)
+        {
+            ToolStripMenuItem menuRefreshItem = new ToolStripMenuItem();
+            menuRefreshItem.Text = text;
+            menuRefreshItem.Click += (s, e) => { SetAutoUpdateInterval(minutes); };
+            menuRefreshItems.Add(minutes, menuRefreshItem);
+            menuRefresh.DropDownItems.Add(menuRefreshItem);
+        }
+
+        private static void SetAutoUpdateInterval(int minutes)
+        {
+            foreach (ToolStripMenuItem t in menuRefreshItems.Values)
+            {
+                t.Checked = false;
+            }
+            menuRefreshItems[minutes].Checked = true;
+            interval = minutes;
+            if (minutes == 0)
+            {
+                timer.Stop();
+            }
+            else
+            {
+                timer.Stop();
+                timer.Interval = minutes * 60000;
+                timer.Start();
+            }
+        }
+
+        private static void SwapMeasurementF(Object sender, EventArgs e)
+        {
+            measurement = 'F';
+            menuTempF.Checked = true;
+            menuTempC.Checked = false;
+            menuTemp.Text = "Temperature (°" + measurement + ")";
+            GetWeather();
+        }
+
+        private static void SwapMeasurementC(Object sender, EventArgs e)
+        {
+            measurement = 'C';
+            menuTempC.Checked = true;
+            menuTempF.Checked = false;
+            menuTemp.Text = "Temperature (°" + measurement + ")";
+            GetWeather();
         }
 
         private static void SwapMeasurement(Object sender, EventArgs e)
         {
             if (measurement == 'F') measurement = 'C';
             else measurement = 'F';
-            ToolStripMenuItem optionMeasurement = (ToolStripMenuItem) sender;
-            optionMeasurement.Text = "Temperature: °" + measurement;
+            menuTemp.Text = "Temperature: °" + measurement;
             GetWeather();
         }
 
@@ -106,34 +198,48 @@ namespace WeatherApp
 
         private static async void GetLatLong(String location)
         {
-            HttpClient http = new HttpClient();
-            ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
-            http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
-            String url = "https://geocode.maps.co/search?q=" + location;
-            String response = await http.GetStringAsync(url);
-            JToken root1 = JToken.Parse(response);
-            JToken first = root1.First;
-            if (first != null && first.HasValues)
+            try
             {
-                latitude = first.Value<String>("lat") ?? latitude;
-                longitude = first.Value<String>("lon") ?? longitude;
-                GetWeather();
+                HttpClient http = new HttpClient();
+                ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
+                http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
+                String url = "https://geocode.maps.co/search?q=" + location;
+                String response = await http.GetStringAsync(url);
+                JToken root1 = JToken.Parse(response);
+                JToken first = root1.First;
+                if (first != null && first.HasValues)
+                {
+                    latitude = first.Value<String>("lat") ?? latitude;
+                    longitude = first.Value<String>("lon") ?? longitude;
+                    GetWeather();
+                }
+            }
+            catch
+            {
+
             }
         }
 
         private static async void AutoGetLocation(Object sender, EventArgs e)
         {
-            HttpClient http = new HttpClient();
-            ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
-            http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
-            String url = "https://ipapi.co/json/";
-            String response = await http.GetStringAsync(url);
-            JToken root = JToken.Parse(response);
-            if (root.HasValues)
+            try
             {
-                latitude = root.Value<String>("latitude") ?? latitude;
-                longitude = root.Value<String>("longitude") ?? longitude;
-                GetWeather();
+                HttpClient http = new HttpClient();
+                ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
+                http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
+                String url = "https://ipapi.co/json/";
+                String response = await http.GetStringAsync(url);
+                JToken root = JToken.Parse(response);
+                if (root.HasValues)
+                {
+                    latitude = root.Value<String>("latitude") ?? latitude;
+                    longitude = root.Value<String>("longitude") ?? longitude;
+                    GetWeather();
+                }
+            }
+            catch
+            {
+
             }
         }
 
@@ -145,23 +251,30 @@ namespace WeatherApp
         private static async void GetWeather()
         {
             if (latitude == "" || longitude == "") return;
-            HttpClient http = new HttpClient();
-            ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
-            http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
-            String url = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude + "&longitude=" + longitude + "&current_weather=true&temperature_unit=fahrenheit";
-            String response = await http.GetStringAsync(url);
-            JToken root = JToken.Parse(response);
-            JToken weather = root.Value<JToken>("current_weather");
-            if (weather != null && weather.HasValues)
+            try
             {
-                int weatherCode = weather.Value<int>("weathercode");
-                String forecast = getForecast(weatherCode);
-                weatherIcon.Icon = getIcon(weatherCode);
-                int temperatureF = weather.Value<int>("temperature");
-                int temperatureC = ((temperatureF - 32) * 5) / 9;
-                weatherIcon.Text = forecast;
-                SetTemperatureIcon(temperatureF, temperatureC);
-                temperatureIcon.Text = temperatureF + " °F" + Environment.NewLine + temperatureC + " °C";
+                HttpClient http = new HttpClient();
+                ProductInfoHeaderValue userAgentHeader = new ProductInfoHeaderValue("WeatherApp", "1.0");
+                http.DefaultRequestHeaders.UserAgent.Add(userAgentHeader);
+                String url = "https://api.open-meteo.com/v1/forecast?latitude=" + latitude + "&longitude=" + longitude + "&current_weather=true&temperature_unit=fahrenheit";
+                String response = await http.GetStringAsync(url);
+                JToken root = JToken.Parse(response);
+                JToken weather = root.Value<JToken>("current_weather");
+                if (weather != null && weather.HasValues)
+                {
+                    int weatherCode = weather.Value<int>("weathercode");
+                    String forecast = getForecast(weatherCode);
+                    weatherIcon.Icon = getIcon(weatherCode);
+                    int temperatureF = weather.Value<int>("temperature");
+                    int temperatureC = ((temperatureF - 32) * 5) / 9;
+                    weatherIcon.Text = forecast;
+                    SetTemperatureIcon(temperatureF, temperatureC);
+                    temperatureIcon.Text = temperatureF + " °F" + Environment.NewLine + temperatureC + " °C";
+                }
+            }
+            catch
+            {
+
             }
         }
 
@@ -225,6 +338,7 @@ namespace WeatherApp
             Properties.Settings.Default.longitude = longitude;
             Properties.Settings.Default.latitude = latitude;
             Properties.Settings.Default.measurement = (measurement == 'F' || measurement == 'C') ? measurement : 'F';
+            Properties.Settings.Default.interval = interval;
             Properties.Settings.Default.Save();
             weatherIcon.Visible = false;
             weatherIcon.Dispose();
@@ -232,6 +346,7 @@ namespace WeatherApp
             temperatureIcon.Dispose();
             Application.Exit();
         }
+
         private static Bitmap getDigitImage(int digit)
         {
             switch (digit)
