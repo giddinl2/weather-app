@@ -12,6 +12,9 @@ namespace WeatherApp
         private static ToolStripMenuItem menuTemp;
         private static ToolStripMenuItem menuTempF;
         private static ToolStripMenuItem menuTempC;
+        private static ToolStripMenuItem menuTempColor;
+        private static ToolStripMenuItem menuTempColorLight;
+        private static ToolStripMenuItem menuTempColorDark;
         private static ToolStripMenuItem menuRefresh;
         private static Dictionary<int, ToolStripMenuItem> menuRefreshItems = new Dictionary<int, ToolStripMenuItem>();
         private static Timer timer;
@@ -20,6 +23,9 @@ namespace WeatherApp
         private static String longitude = "";
         private static char measurement = 'F';
         private static int interval = 30;
+        private static bool lightText = true;
+        private static int temperatureF = 0;
+        private static int temperatureC = 0;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
@@ -29,7 +35,9 @@ namespace WeatherApp
             latitude = Properties.Settings.Default.latitude;
             longitude = Properties.Settings.Default.longitude;
             measurement = Properties.Settings.Default.measurement;
+            measurement = (measurement == 'C') ? 'C' : 'F';
             interval = Properties.Settings.Default.interval;
+            lightText = Properties.Settings.Default.lightText;
 
             ContextMenuStrip menu = new ContextMenuStrip();
 
@@ -50,14 +58,30 @@ namespace WeatherApp
             menuTempF = new ToolStripMenuItem();
             menuTempF.Text = "°F";
             menuTempF.Checked = (measurement != 'C');
-            menuTempF.Click += new EventHandler(SwapMeasurementF);
+            menuTempF.Click += (s, e) => { ChangeMeasurement(false); };
             menuTemp.DropDownItems.Add(menuTempF);
 
             menuTempC = new ToolStripMenuItem();
             menuTempC.Text = "°C";
             menuTempC.Checked = (measurement == 'C');
-            menuTempC.Click += new EventHandler(SwapMeasurementC);
+            menuTempC.Click += (s, e) => { ChangeMeasurement(true); };
             menuTemp.DropDownItems.Add(menuTempC);
+
+            menuTempColor = new ToolStripMenuItem();
+            menuTempColor.Text = "Temperature Color";
+            menu.Items.Add(menuTempColor);
+
+            menuTempColorLight = new ToolStripMenuItem();
+            menuTempColorLight.Text = "Light";
+            menuTempColorLight.Checked = lightText;
+            menuTempColorLight.Click += (s, e) => { ChangeTempColorLight(true); };
+            menuTempColor.DropDownItems.Add(menuTempColorLight);
+
+            menuTempColorDark = new ToolStripMenuItem();
+            menuTempColorDark.Text = "Dark";
+            menuTempColorDark.Checked = !lightText;
+            menuTempColorDark.Click += (s, e) => { ChangeTempColorLight(false); };
+            menuTempColor.DropDownItems.Add(menuTempColorDark);
 
             menuRefresh = new ToolStripMenuItem();
             menuRefresh.Text = "Auto-Refresh Interval";
@@ -109,7 +133,7 @@ namespace WeatherApp
 
             timer = new Timer();
             timer.Interval = interval * 60000;
-            timer.Tick += new EventHandler(RefreshWeather);
+            timer.Tick += (s, e) => { GetWeather(); };
             timer.Start();
         }
 
@@ -140,32 +164,26 @@ namespace WeatherApp
                 timer.Interval = minutes * 60000;
                 timer.Start();
             }
+            SaveSettings();
         }
 
-        private static void SwapMeasurementF(Object sender, EventArgs e)
+        private static void ChangeMeasurement(bool C)
         {
-            measurement = 'F';
-            menuTempF.Checked = true;
-            menuTempC.Checked = false;
+            measurement = C ? 'C' : 'F';
+            menuTempC.Checked = C;
+            menuTempF.Checked = !C;
             menuTemp.Text = "Temperature (°" + measurement + ")";
-            GetWeather();
+            SetTemperatureIcon();
+            SaveSettings();
         }
 
-        private static void SwapMeasurementC(Object sender, EventArgs e)
+        private static void ChangeTempColorLight(bool light)
         {
-            measurement = 'C';
-            menuTempC.Checked = true;
-            menuTempF.Checked = false;
-            menuTemp.Text = "Temperature (°" + measurement + ")";
-            GetWeather();
-        }
-
-        private static void SwapMeasurement(Object sender, EventArgs e)
-        {
-            if (measurement == 'F') measurement = 'C';
-            else measurement = 'F';
-            menuTemp.Text = "Temperature: °" + measurement;
-            GetWeather();
+            lightText = light;
+            menuTempColorLight.Checked = light;
+            menuTempColorDark.Checked = !light;
+            SetTemperatureIcon();
+            SaveSettings();
         }
 
         private static void PromptLocation(Object sender, EventArgs e)
@@ -243,11 +261,6 @@ namespace WeatherApp
             }
         }
 
-        private static void RefreshWeather(Object sender, EventArgs e)
-        {
-            GetWeather();
-        }
-
         private static async void GetWeather()
         {
             if (latitude == "" || longitude == "") return;
@@ -265,11 +278,12 @@ namespace WeatherApp
                     int weatherCode = weather.Value<int>("weathercode");
                     String forecast = getForecast(weatherCode);
                     weatherIcon.Icon = getIcon(weatherCode);
-                    int temperatureF = weather.Value<int>("temperature");
-                    int temperatureC = ((temperatureF - 32) * 5) / 9;
+                    temperatureF = weather.Value<int>("temperature");
+                    temperatureC = ((temperatureF - 32) * 5) / 9;
                     weatherIcon.Text = forecast;
-                    SetTemperatureIcon(temperatureF, temperatureC);
+                    SetTemperatureIcon();
                     temperatureIcon.Text = temperatureF + " °F" + Environment.NewLine + temperatureC + " °C";
+                    SaveSettings();
                 }
             }
             catch
@@ -284,16 +298,19 @@ namespace WeatherApp
             {
                 for (int y = 0; y < 16; y++)
                 {
-                    bitmap.SetPixel(x + xOffset, y, digitmap.GetPixel(x, y));
+                    if (digitmap.GetPixel(x, y).A == 255)
+                    {
+                        bitmap.SetPixel(x + xOffset, y, lightText ? Color.White : Color.Black);
+                    }
                 }
             }
         }
 
-        private static void SetTemperatureIcon(int temperatureF, int temperatureC)
+        private static void SetTemperatureIcon()
         {
-            Bitmap bitmap;
+            Bitmap bitmap = new Bitmap(16, 16);
             int temperature = 0;
-            bitmap = (measurement == 'C') ? new Bitmap(Resources.degreeC) : bitmap = new Bitmap(Resources.degreeF);
+            PasteDigitImage(bitmap, (measurement == 'C') ? new Bitmap(Resources.degreeC) : new Bitmap(Resources.degreeF), 10);
             temperature = (measurement == 'C') ? temperatureC : temperatureF;
             if (temperature < 0)
             {
@@ -333,13 +350,19 @@ namespace WeatherApp
             DestroyIcon(icon.Handle);
         }
 
-        private void Exit(Object sender, EventArgs e)
+        private static void SaveSettings()
         {
             Properties.Settings.Default.longitude = longitude;
             Properties.Settings.Default.latitude = latitude;
             Properties.Settings.Default.measurement = (measurement == 'F' || measurement == 'C') ? measurement : 'F';
             Properties.Settings.Default.interval = interval;
+            Properties.Settings.Default.lightText = lightText;
             Properties.Settings.Default.Save();
+        }
+
+        private void Exit(Object sender, EventArgs e)
+        {
+            SaveSettings();
             weatherIcon.Visible = false;
             weatherIcon.Dispose();
             temperatureIcon.Visible = false;

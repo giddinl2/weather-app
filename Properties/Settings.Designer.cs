@@ -70,5 +70,17 @@ namespace WeatherApp.Properties {
                 this["interval"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool lightText {
+            get {
+                return ((bool)(this["lightText"]));
+            }
+            set {
+                this["lightText"] = value;
+            }
+        }
     }
 }
