@@ -130,8 +130,17 @@
   <data name="fog" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\fog.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="geocode" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\geocode.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="ipapi" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\ipapi.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="mostlyclear" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\mostlyclear.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="open_metro" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\open-metro.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="overcast" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\overcast.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

@@ -264,14 +264,29 @@ namespace WeatherApp
             menuTheme.DropDownItems.Add(menuThemeDark);
 
             menu.Items.Add(new ToolStripSeparator());
-            ToolStripLabel labelPoweredBy = new("Powered by Open-Metro");
-            labelPoweredBy.IsLink = true;
-            Process linkProcess = new();
-            linkProcess.StartInfo.UseShellExecute = true;
-            linkProcess.StartInfo.FileName = "https://open-meteo.com/";
-            labelPoweredBy.Click += (s, e) => {
+
+            ToolStripMenuItem menuAbout = new();
+            menuAbout.Text = "About";
+            ContextMenuStrip menuAboutDropdown = new();
+            menuAboutDropdown.Renderer = weatherRenderer;
+            menuAboutDropdown.ShowCheckMargin = false;
+            menuAboutDropdown.ShowImageMargin = false;
+            menuAbout.DropDown = menuAboutDropdown;
+
+            ToolStripLabel labelPoweredBy = new("Powered By:");
+            menuAbout.DropDownItems.Add(labelPoweredBy);
+
+            menuAbout.DropDownItems.Add(new ToolStripSeparator());
+
+            ToolStripLabel labelOpenMetro = new("Open-Metro", Resources.open_metro);
+            labelOpenMetro.IsLink = true;
+            labelOpenMetro.LinkBehavior = LinkBehavior.HoverUnderline;
+            labelOpenMetro.Click += (s, e) => {
                 try
                 {
+                    Process linkProcess = new();
+                    linkProcess.StartInfo.UseShellExecute = true;
+                    linkProcess.StartInfo.FileName = "https://open-meteo.com/";
                     linkProcess.Start();
                 }
                 catch
@@ -279,7 +294,45 @@ namespace WeatherApp
 
                 }
             };
-            menu.Items.Add(labelPoweredBy);
+            menuAbout.DropDownItems.Add(labelOpenMetro);
+
+            ToolStripLabel labelGeocode = new("Geocode Maps", Resources.geocode);
+            labelGeocode.IsLink = true;
+            labelGeocode.LinkBehavior = LinkBehavior.HoverUnderline;
+            labelGeocode.Click += (s, e) => {
+                try
+                {
+                    Process linkProcess = new();
+                    linkProcess.StartInfo.UseShellExecute = true;
+                    linkProcess.StartInfo.FileName = "https://geocode.maps.co/";
+                    linkProcess.Start();
+                }
+                catch
+                {
+
+                }
+            };
+            menuAbout.DropDownItems.Add(labelGeocode);
+
+            ToolStripLabel labelIpAPI = new("IP API", Resources.ipapi);
+            labelIpAPI.IsLink = true;
+            labelIpAPI.LinkBehavior = LinkBehavior.HoverUnderline;
+            labelIpAPI.Click += (s, e) => {
+                try
+                {
+                    Process linkProcess = new();
+                    linkProcess.StartInfo.UseShellExecute = true;
+                    linkProcess.StartInfo.FileName = "https://ipapi.co/";
+                    linkProcess.Start();
+                }
+                catch
+                {
+
+                }
+            };
+            menuAbout.DropDownItems.Add(labelIpAPI);
+
+            menu.Items.Add(menuAbout);
 
             menu.Items.Add(new ToolStripSeparator());
 
