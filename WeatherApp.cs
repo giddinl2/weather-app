@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json.Linq;
@@ -261,6 +262,24 @@ namespace WeatherApp
             menuThemeDark.Checked = !lightTheme;
             menuThemeDark.Click += (s, e) => { ChangeTheme(false); };
             menuTheme.DropDownItems.Add(menuThemeDark);
+
+            menu.Items.Add(new ToolStripSeparator());
+            ToolStripLabel labelPoweredBy = new("Powered by Open-Metro");
+            labelPoweredBy.IsLink = true;
+            Process linkProcess = new();
+            linkProcess.StartInfo.UseShellExecute = true;
+            linkProcess.StartInfo.FileName = "https://open-meteo.com/";
+            labelPoweredBy.Click += (s, e) => {
+                try
+                {
+                    linkProcess.Start();
+                }
+                catch
+                {
+
+                }
+            };
+            menu.Items.Add(labelPoweredBy);
 
             menu.Items.Add(new ToolStripSeparator());
 
