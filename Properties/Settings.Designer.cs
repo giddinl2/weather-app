@@ -73,13 +73,13 @@ namespace WeatherApp.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool lightText {
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool lightTheme {
             get {
-                return ((bool)(this["lightText"]));
+                return ((bool)(this["lightTheme"]));
             }
             set {
-                this["lightText"] = value;
+                this["lightTheme"] = value;
             }
         }
     }
