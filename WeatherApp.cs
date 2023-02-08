@@ -490,7 +490,7 @@ namespace WeatherApp
                         int day = new DateTime(1970, 1, 1).AddSeconds(times[i]).ToLocalTime().Day;
                         if (day != currentDay)
                         {
-                            if (i != 0) menuHourlyForecast.DropDownItems.Add(new ToolStripSeparator());
+                            if (hours != 0) menuHourlyForecast.DropDownItems.Add(new ToolStripSeparator());
                             nextDay = true;
                         }
                     }
@@ -534,10 +534,6 @@ namespace WeatherApp
                 String display = String.Format("  {0, 4}   {1, 4}    {2}", dailyMaxTemp, dailyMinTemp, day);
                 ToolStripLabel dailyForecast = new ToolStripLabel(display, image);
                 menuDailyForecast.DropDownItems.Add(dailyForecast);
-                if (i < 6)
-                {
-                    menuDailyForecast.DropDownItems.Add(new ToolStripSeparator());
-                }
             }
         }
 
