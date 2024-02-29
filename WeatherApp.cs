@@ -217,14 +217,19 @@ namespace WeatherApp
 
             CreateRefreshMenu(0, "No Auto-Refresh");
             menuRefresh.DropDownItems.Add(new ToolStripSeparator());
-            CreateRefreshMenu(1, "1 Minute");
-            CreateRefreshMenu(5, "5 Minutes");
-            CreateRefreshMenu(10, "10 Minutes");
-            CreateRefreshMenu(15, "15 Minutes");
-            CreateRefreshMenu(20, "20 Minutes");
+            //CreateRefreshMenu(1, "1 Minute");
+            //CreateRefreshMenu(5, "5 Minutes");
+            //CreateRefreshMenu(10, "10 Minutes");
+            //CreateRefreshMenu(15, "15 Minutes");
+            //CreateRefreshMenu(20, "20 Minutes");
             CreateRefreshMenu(30, "30 Minutes");
-            CreateRefreshMenu(60, "60 Minutes");
+            CreateRefreshMenu(60, "1 Hour");
+            CreateRefreshMenu(120, "2 Hours");
+            CreateRefreshMenu(180, "3 Hours");
+            CreateRefreshMenu(240, "4 Hours");
+            CreateRefreshMenu(360, "6 Hours");
             CreateRefreshMenu(480, "8 Hours");
+            CreateRefreshMenu(720, "12 Hours");
             CreateRefreshMenu(1440, "24 Hours");
 
             try
@@ -233,8 +238,8 @@ namespace WeatherApp
             }
             catch
             {
-                menuRefreshItems[30].Checked = false;
-                interval = 30;
+                menuRefreshItems[60].Checked = true;
+                interval = 60;
             }
 
             menuTemp.Text = "Temperature (°" + measurement + ")";
